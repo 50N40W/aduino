@@ -1,6 +1,8 @@
 /*
   -- In Progress - Not Working --
-  Read current and display work
+  Read current in amps and display work
+  This involves time and voltage to calculate
+  Watts.
   Project for stationary cycle at bike coop
 Pins used:
 0                       7    IN reset switch
