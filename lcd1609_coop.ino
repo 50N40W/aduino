@@ -44,9 +44,9 @@ Borrowing heavily from previous work by others:
 #include <LiquidCrystal.h>
 #define CON_WARNLAMP_TIME  20
 //#define CON_HIGH_CURRENT   35
-#define CON_HIGH_CURRENT   35
+#define CON_HIGH_CURRENT       35
 #define CON_MAX_LAMP_TIME    1000
-#define CON_MAX_WATTS             999
+#define CON_MAX_WATTS       10000
 unsigned long time = 0;
 unsigned long last_time = 0;
 //int testlamp = 8;
@@ -54,6 +54,10 @@ int ledwarn = 13;
 int switchPin = 7;
 int ledwarncount =10;
 int outputWS = 0;
+int buttonState;
+int last_reset_switch = LOW;
+long last_debouncetime = 0;
+long bounceTime = 100;
 // initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
@@ -77,9 +81,14 @@ void setup() {
 /* --------------------------------------------------*/
 // Get and debounce reset switch
 int get_reset_switch() {
-  int debounced_reset_switch;
-  debounced_reset_switch = digitalRead(switchPin);
-   return debounced_reset_switch; 
+  int reset_switch = digitalRead(switchPin);
+  if (reset_switch != last_reset_switch) {
+      last_debouncetime = millis();
+  }
+  else if ((millis() - last_debouncetime) > bounceTime) {
+    last_reset_switch = reset_switch;
+  }
+   return last_reset_switch; 
 }
 
 /* --------------------------------------------------*/
@@ -89,7 +98,7 @@ int get_reset_switch() {
 float get_current(int reset_asserted)  {
   float outputAmp;
   // read the current and volt pin and linearize it.
-  if (reset_asserted == 1)   {
+  if (reset_asserted == HIGH)   {
      outputAmp = 0;
   }
  else { 
@@ -112,7 +121,7 @@ int set_warn_lamp (int reset_asserted, float outputAmp) {
           ledwarncount += CON_WARNLAMP_TIME;
        }
   }
-  if ((ledwarncount < CON_WARNLAMP_TIME) || (reset_asserted == 1)){
+  if ((ledwarncount < CON_WARNLAMP_TIME) || (reset_asserted == HIGH)){
      digitalWrite(ledwarn, LOW);
     ledwarncount = 0;
   }
@@ -128,13 +137,13 @@ int set_warn_lamp (int reset_asserted, float outputAmp) {
 //       Get Volts
 /* --------------------------------------------------*/
 float get_volts(int reset_asserted) {
-   float outputVolts = 0;
-   if (reset_asserted == 1) {
+   float outputVolts;
+   if (reset_asserted == HIGH) {
      outputVolts = 0;
    }
    else {  
       int senseVolts = analogRead(A1);
-      float voltage = senseVolts * (5.0 / 1023.0);
+      float voltage = ((float)senseVolts) * (5.0 / 1023.0);
       float outputVolts = voltage*71.5;
    }
    return outputVolts;
@@ -147,8 +156,11 @@ float get_volts(int reset_asserted) {
 float calc_watts(int reset_asserted, float current, float voltage) {
   float watts_out;
   watts_out = current * voltage;
-  if ((watts_out < 0) || (watts_out > CON_MAX_WATTS) || (reset_asserted == 1)) {
+  if ((watts_out < 0) || (reset_asserted == HIGH)) {
     watts_out = 0;
+  }
+  else if (watts_out > CON_MAX_WATTS) {
+    watts_out = CON_MAX_WATTS;
   }
   return watts_out;
 }
@@ -180,9 +192,9 @@ int make_output(int otimer, float outputAmp, float outputVolts, float watt)  {
   // set the cursor to column 0, line 1
   // (note: line 1 is the second row, since counting begins with 0):
 
-  lcd.setCursor(0,2);
+  lcd.setCursor(0,0);
   lcd.print ("Current ");
-  lcd.setCursor (8,2);
+  lcd.setCursor (8,0);
   lcd.print (outputAmp);
   //float watt = outputVolts*outputAmp;
   lcd.setCursor (0,3);
@@ -221,5 +233,5 @@ void loop() {
   timer = check_time(reset_asserted);
   watts = calc_watts(reset_asserted, current, volts);
   status1 = make_output( timer, current, volts, watts);
-  delay(1000);
+  delay(50);
 }
