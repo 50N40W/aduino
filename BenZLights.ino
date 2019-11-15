@@ -36,8 +36,8 @@ const byte EGR = 3;     // will flash EGR lamp
 const byte CEL = 4;     // EGR Steady, Flash Check Engine Lamp
 const byte QUIET = 5;   // Give a little dead time before restart
 
-//                      PWR  POST  WAIT  EGR   CEL   QUIET
-const long PERIOD[] = {1000, 3000,  100, 5000, 5000, 10000};
+//                      PWR  POST  WAIT  EGR    CEL    QUIET
+const long PERIOD[] = {1000, 3000,  100, 10000, 10000, 15000};
 // let's say 1 is steady, 2 is blinking.  
 // Low nibble is EGR, upper nibble is CEL
 const byte LAMPS[] =  {0x00, 0x11, 0x00, 0x02, 0x21,  0x00};
@@ -97,14 +97,16 @@ void setup()
   pinMode(EGR_Pin, OUTPUT); 
   currentState = POWERUP;
   lampCommand = 0x00;
-  //Serial.begin(9600);
+  Serial.begin(9600);
 }
 void loop()
 {
   unsigned long currentMillis = millis(); 
 
   if (currentMillis - prevStateTime > PERIOD[currentState]) {
+    prevStateTime = currentMillis;
     boolean stateComplete = false;
+
     switch (currentState) {
       case POWERUP:
          stateComplete = true;
@@ -117,8 +119,11 @@ void loop()
          long RangeInCentimeters;
          ultrasonic.DistanceMeasure();// get the current signal time;
          RangeInCentimeters = ultrasonic.microsecondsToCentimeters();
+         Serial.print(RangeInCentimeters);//0~400cm
+         Serial.println(" ");
+
          // remember to put a first order filter here to stabilize
-         if (RangeInCentimeters < 200) {
+         if (RangeInCentimeters < 10) {
             stateComplete = true;
          }
          break;      
@@ -132,7 +137,6 @@ void loop()
          stateComplete = true;
          break;
     }
-    prevStateTime = currentMillis;
     if (stateComplete){
       if (currentState == QUIET) {
         currentState = WAITING;
@@ -141,13 +145,23 @@ void loop()
         currentState++;
       }
     }
+    Serial.print("Current State: ");
+    Serial.println(currentState);
   }
   if (currentMillis - prevLampTime > LAMP_PERIOD) {
     prevLampTime = currentMillis;
-    CEL_Lamp = (LAMPS[currentState] & 0x20 && CEL_Lamp == LOW)? HIGH : LOW;
-    CEL_Lamp = (LAMPS[currentState] & 0x10)? LOW : HIGH;
-    EGR_Lamp = (LAMPS[currentState] & 0x02 && EGR_Lamp == LOW)? HIGH : LOW;
-    EGR_Lamp = (LAMPS[currentState] & 0x01)? LOW : HIGH;   
+    if (LAMPS[currentState] & 0x20) {
+       CEL_Lamp = (LAMPS[currentState] & 0x20 && CEL_Lamp == LOW)? HIGH : LOW;
+    }
+    else {
+       CEL_Lamp = (LAMPS[currentState] & 0x10)? HIGH : LOW;
+    }
+    if (LAMPS[currentState] & 0x02) {
+       EGR_Lamp = (LAMPS[currentState] & 0x02 && EGR_Lamp == LOW)? HIGH : LOW;
+    }
+    else {
+      EGR_Lamp = (LAMPS[currentState] & 0x01)? HIGH : LOW;   
+    }
     digitalWrite(CEL_Pin, CEL_Lamp);
     digitalWrite(EGR_Pin, EGR_Lamp);
   }
