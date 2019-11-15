@@ -37,11 +37,11 @@ const byte CEL = 4;     // EGR Steady, Flash Check Engine Lamp
 const byte QUIET = 5;   // Give a little dead time before restart
 
 //                      PWR  POST  WAIT  EGR    CEL    QUIET
-const long PERIOD[] = {1000, 3000,  100, 10000, 10000, 15000};
+const long PERIOD[] = {1000, 5000,  100, 15000, 15000, 20000};
 // let's say 1 is steady, 2 is blinking.  
 // Low nibble is EGR, upper nibble is CEL
 const byte LAMPS[] =  {0x00, 0x11, 0x00, 0x02, 0x21,  0x00};
-const long LAMP_PERIOD = 500;
+const long LAMP_PERIOD = 900;
 const int CEL_Pin = 13;
 const int EGR_Pin = 12;
 int CEL_Lamp = LOW;
@@ -123,7 +123,7 @@ void loop()
          Serial.println(" ");
 
          // remember to put a first order filter here to stabilize
-         if (RangeInCentimeters < 10) {
+         if (RangeInCentimeters < 200) {
             stateComplete = true;
          }
          break;      
