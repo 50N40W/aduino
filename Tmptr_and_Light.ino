@@ -15,6 +15,8 @@ unsigned long previousMillis = 0;
 unsigned long prevDhtMillis = 0;
 unsigned long photoMillis = 0;
 int lightLevel = 500;
+byte dht_tmptr = 0;
+byte dht_humidity = 0;
 
 
 Adafruit_BMP085 bmp;   
@@ -36,8 +38,7 @@ void setup(void)
 
 void loop(void) 
 {
-  byte dht_tmptr = 0;
-  byte dht_humidity = 0;
+
   unsigned long currentMillis = millis();
   if (currentMillis - prevDhtMillis > DHT_PERIOD) {
     prevDhtMillis = currentMillis;
